@@ -3,6 +3,7 @@ use crate::Ray;
 use crate::Vec3;
 
 use dyn_clone::DynClone;
+use rand::random;
 
 pub trait Material: DynClone {
     fn scatter(
@@ -82,5 +83,45 @@ impl Material for Metal {
         *scattered = Ray::new(hit_record.point, reflected);
         *attenuation = self.albedo;
         scattered.direction.dot(&hit_record.normal) > 0.0
+    }
+}
+
+#[derive(Clone)]
+pub struct Dielectric {
+    pub refraction_index: f64
+}
+
+impl Dielectric {
+    pub fn new(refraction_index: f64) -> Self {
+        Self { refraction_index }
+    }
+
+    fn reflectance(cosine: f64, refraction_index: f64) -> f64 {
+        let r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+    }
+}
+
+impl Material for Dielectric {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+        *attenuation = Vec3::one();
+        let ri = if hit_record.front_face { 1.0 / self.refraction_index } else { self.refraction_index };
+
+        let unit_direction = ray.direction.normal();
+        let cos_theta = (-unit_direction).dot(&hit_record.normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+        let cannot_refract = ri * sin_theta > 1.0;
+        let direction;
+
+        if cannot_refract || Self::reflectance(cos_theta, ri) > random::<f64>() {
+            direction = unit_direction.reflected(&hit_record.normal);
+        } else {
+            direction = unit_direction.refracted(&hit_record.normal, ri);
+        }
+
+        *scattered = Ray::new(hit_record.point, direction);
+        true
     }
 }

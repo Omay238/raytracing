@@ -48,7 +48,7 @@ impl Vec3 {
         }
     }
 
-    pub fn random_on_hemisphere(normal: &Self) -> Self {
+    pub fn random_on_hemisphere(normal: &Self) -> Vec3 {
         let p = Self::random();
         if normal.dot(&p) > 0.0 { p } else { -p }
     }
@@ -70,7 +70,7 @@ impl Vec3 {
             z: self.x * other.y - self.y * other.x,
         }
     }
-    pub fn normal(&self) -> Self {
+    pub fn normal(&self) -> Vec3 {
         *self / self.length()
     }
 
@@ -81,6 +81,13 @@ impl Vec3 {
 
     pub fn reflected(&self, normal: &Vec3) -> Vec3 {
         *self - 2.0 * self.dot(normal) * *normal
+    }
+
+    pub fn refracted(&self, normal: &Vec3, etai_over_etat: f64) -> Vec3 {
+        let cos_theta = (-*self).dot(normal).min(1.0);
+        let r_out_perp = etai_over_etat * (*self + cos_theta * *normal);
+        let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * *normal;
+        r_out_perp + r_out_parallel
     }
 
     pub fn color(&self, max_val: u16) -> [u16; 3] {
