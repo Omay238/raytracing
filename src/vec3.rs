@@ -107,6 +107,14 @@ impl std::ops::Mul<f64> for Vec3 {
     }
 }
 
+impl std::ops::Mul<Vec3> for f64 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl std::ops::MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, rhs: f64) {
         *self = *self * rhs;
@@ -123,6 +131,14 @@ impl std::ops::Div<f64> for Vec3 {
             y: self.y * recip,
             z: self.z * recip,
         }
+    }
+}
+
+impl std::ops::Div<Vec3> for f64 {
+    type Output = Vec3;
+
+    fn div(self, rhs: Vec3) -> Self::Output {
+        rhs / self
     }
 }
 
