@@ -53,6 +53,19 @@ impl Vec3 {
         if normal.dot(&p) > 0.0 { p } else { -p }
     }
 
+    pub fn random_in_disc() -> Vec3 {
+        loop {
+            let p = Vec3::new(
+                random::<f64>() * 2.0 - 1.0,
+                random::<f64>() * 2.0 - 1.0,
+                0.0,
+            );
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
     pub fn length_squared(&self) -> f64 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
