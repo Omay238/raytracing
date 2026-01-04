@@ -59,7 +59,7 @@ impl Material for Lambertian {
 #[derive(Clone)]
 pub struct Metal {
     albedo: Vec3,
-    fuzz: f64
+    fuzz: f64,
 }
 
 impl Metal {
@@ -88,7 +88,7 @@ impl Material for Metal {
 
 #[derive(Clone)]
 pub struct Dielectric {
-    pub refraction_index: f64
+    pub refraction_index: f64,
 }
 
 impl Dielectric {
@@ -104,22 +104,30 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, ray: &Ray, hit_record: &HitRecord, attenuation: &mut Vec3, scattered: &mut Ray) -> bool {
+    fn scatter(
+        &self,
+        ray: &Ray,
+        hit_record: &HitRecord,
+        attenuation: &mut Vec3,
+        scattered: &mut Ray,
+    ) -> bool {
         *attenuation = Vec3::one();
-        let ri = if hit_record.front_face { 1.0 / self.refraction_index } else { self.refraction_index };
+        let ri = if hit_record.front_face {
+            1.0 / self.refraction_index
+        } else {
+            self.refraction_index
+        };
 
         let unit_direction = ray.direction.normal();
         let cos_theta = (-unit_direction).dot(&hit_record.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = ri * sin_theta > 1.0;
-        let direction;
-
-        if cannot_refract || Self::reflectance(cos_theta, ri) > random::<f64>() {
-            direction = unit_direction.reflected(&hit_record.normal);
+        let direction = if cannot_refract || Self::reflectance(cos_theta, ri) > random::<f64>() {
+            unit_direction.reflected(&hit_record.normal)
         } else {
-            direction = unit_direction.refracted(&hit_record.normal, ri);
-        }
+            unit_direction.refracted(&hit_record.normal, ri)
+        };
 
         *scattered = Ray::new(hit_record.point, direction);
         true

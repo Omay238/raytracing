@@ -2,7 +2,7 @@ use raytracer::Camera;
 use raytracer::HittableList;
 use raytracer::Sphere;
 use raytracer::Vec3;
-use raytracer::material::{Lambertian, Metal, Dielectric};
+use raytracer::material::{Dielectric, Lambertian, Metal};
 
 fn main() {
     let mut world = HittableList::default();
@@ -39,6 +39,15 @@ fn main() {
         Box::new(material_right),
     )));
 
-    let camera = Camera::new(16.0 / 9.0, 400, 10000, 100);
+    let camera = Camera::new(
+        16.0 / 9.0,
+        400,
+        100,
+        10,
+        20.0,
+        Vec3::new(-2.0, 2.0, 1.0),
+        Vec3::new(0.0, 0.0, -1.0),
+        Vec3::new(0.0, 1.0, 0.0),
+    );
     camera.render(&world);
 }
