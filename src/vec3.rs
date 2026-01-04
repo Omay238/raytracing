@@ -1,6 +1,6 @@
 use rand::random;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Default)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -8,6 +8,22 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    pub fn zero() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    }
+
+    pub fn one() -> Self {
+        Self {
+            x: 1.0,
+            y: 1.0,
+            z: 1.0,
+        }
+    }
+
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -56,6 +72,15 @@ impl Vec3 {
     }
     pub fn normal(&self) -> Self {
         *self / self.length()
+    }
+
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        self.x.abs() < s && self.y.abs() < s && self.z.abs() < s
+    }
+
+    pub fn reflected(&self, normal: &Vec3) -> Vec3 {
+        *self - 2.0 * self.dot(normal) * *normal
     }
 
     pub fn color(&self, max_val: u16) -> [u16; 3] {
@@ -118,6 +143,18 @@ impl std::ops::Sub for Vec3 {
 impl std::ops::SubAssign for Vec3 {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
+    }
+}
+
+impl std::ops::Mul for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
     }
 }
 

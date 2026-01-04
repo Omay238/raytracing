@@ -1,10 +1,12 @@
+use crate::Material;
 use crate::Ray;
 use crate::Vec3;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Default)]
 pub struct HitRecord {
     pub point: Vec3,
     pub normal: Vec3,
+    pub material: Box<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }

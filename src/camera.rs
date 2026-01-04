@@ -37,7 +37,7 @@ impl Camera {
         let focal_length = 1.0;
         let viewport_height = 2.0;
         let viewport_width = viewport_height * (image_width as f64 / image_height as f64);
-        let center = Vec3::new_i32(0, 0, 0);
+        let center = Vec3::zero();
 
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
         let viewport_u = Vec3::new(viewport_width, 0.0, 0.0);
@@ -105,15 +105,22 @@ impl Camera {
 
     fn ray_color(&self, ray: &Ray, depth: usize, world: &HittableList) -> Vec3 {
         if depth == 0 {
-            return Vec3::default();
+            return Vec3::zero();
         }
         let mut record = HitRecord::default();
         if world.hit(*ray, 0.001..f64::INFINITY, &mut record) {
-            let direction = record.normal + Vec3::random();
-            return 0.5 * self.ray_color(&Ray::new(record.point, direction), depth - 1, world);
+            let mut scattered = Ray::default();
+            let mut attenuation = Vec3::zero();
+            if record
+                .material
+                .scatter(ray, &record, &mut attenuation, &mut scattered)
+            {
+                return attenuation * self.ray_color(&scattered, depth - 1, world);
+            }
+            return Vec3::zero();
         }
         let unit_direction = ray.direction.normal();
         let a = 0.5 * (unit_direction.y + 1.0);
-        (1.0 - a) * Vec3::new_i32(1, 1, 1) + a * Vec3::new(0.5, 0.7, 1.0)
+        (1.0 - a) * Vec3::one() + a * Vec3::new(0.5, 0.7, 1.0)
     }
 }
