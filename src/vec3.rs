@@ -1,3 +1,5 @@
+use rand::random;
+
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Vec3 {
     pub x: f64,
@@ -15,6 +17,24 @@ impl Vec3 {
             y: y as f64,
             z: z as f64,
         }
+    }
+    pub fn random() -> Self {
+        loop {
+            let p = Self::new(
+                random::<f64>() * 2.0 - 1.0,
+                random::<f64>() * 2.0 - 1.0,
+                random::<f64>() * 2.0 - 1.0,
+            );
+            let lensq = p.length_squared();
+            if 1e-160 < lensq && lensq <= 1.0 {
+                return p / lensq.sqrt();
+            }
+        }
+    }
+
+    pub fn random_on_hemisphere(normal: &Self) -> Self {
+        let p = Self::random();
+        if normal.dot(&p) > 0.0 { p } else { -p }
     }
 
     pub fn length_squared(&self) -> f64 {
@@ -44,6 +64,12 @@ impl Vec3 {
             (self.y * max_val as f64 + 0.999) as u16,
             (self.z * max_val as f64 + 0.999) as u16,
         ]
+    }
+
+    pub fn color_correct(&mut self) {
+        self.x = self.x.clamp(0.0, 1.0).sqrt();
+        self.y = self.y.clamp(0.0, 1.0).sqrt();
+        self.z = self.z.clamp(0.0, 1.0).sqrt();
     }
 }
 

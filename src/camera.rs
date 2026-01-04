@@ -11,6 +11,7 @@ pub struct Camera {
     pub aspect_ratio: f64,
     pub image_width: usize,
     pub samples_per_pixel: usize,
+    pub max_depth: usize,
     image_height: usize,
     pixel_samples_scale: f64,
     center: Vec3,
@@ -20,7 +21,12 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize) -> Self {
+    pub fn new(
+        aspect_ratio: f64,
+        image_width: usize,
+        samples_per_pixel: usize,
+        max_depth: usize,
+    ) -> Self {
         // Calculate the image height, and ensure that it's at least 1.
         let image_height = (image_width as f64 / aspect_ratio) as usize;
         let image_height = if image_height < 1 { 1 } else { image_height };
@@ -50,6 +56,7 @@ impl Camera {
             aspect_ratio,
             image_width,
             samples_per_pixel,
+            max_depth,
             image_height,
             pixel_samples_scale,
             center,
@@ -60,7 +67,7 @@ impl Camera {
     }
 
     pub fn render(&self, world: &HittableList) {
-        let mut img = NetPBM::new_ppm(self.image_width, self.image_height, 255);
+        let mut img = NetPBM::new_ppm(self.image_width, self.image_height, 65535);
 
         for j in 0..self.image_height {
             println!("Scanlines remaining: {}", self.image_height - j);
@@ -68,14 +75,17 @@ impl Camera {
                 let mut color = Vec3::default();
 
                 for _ in 0..self.samples_per_pixel {
-                    color += self.ray_color(&self.get_ray(i, j), world);
+                    color += self.ray_color(&self.get_ray(i, j), self.max_depth, world);
                 }
 
-                img.set_pixel(i, j, (color * self.pixel_samples_scale).color(255));
+                color *= self.pixel_samples_scale;
+                color.color_correct();
+                img.set_pixel(i, j, color.color(65535));
             }
         }
 
-        img.save_raw("render.ppm").expect("Failed to save image!");
+        img.save_ascii("render.ppm", None)
+            .expect("Failed to save image!");
     }
 
     fn get_ray(&self, i: usize, j: usize) -> Ray {
@@ -83,7 +93,9 @@ impl Camera {
         // point around the pixel location i, j.
 
         let offset = Vec3::new(random::<f64>() - 0.5, random::<f64>() - 0.5, 0.0);
-        let pixel_sample = self.pixel00_loc + ((i as f64 + offset.x) * self.pixel_delta_u) + ((j as f64 + offset.y) * self.pixel_delta_v);
+        let pixel_sample = self.pixel00_loc
+            + ((i as f64 + offset.x) * self.pixel_delta_u)
+            + ((j as f64 + offset.y) * self.pixel_delta_v);
 
         let ray_origin = self.center;
         let ray_direction = pixel_sample - ray_origin;
@@ -91,10 +103,14 @@ impl Camera {
         Ray::new(ray_origin, ray_direction)
     }
 
-    fn ray_color(&self, ray: &Ray, world: &HittableList) -> Vec3 {
+    fn ray_color(&self, ray: &Ray, depth: usize, world: &HittableList) -> Vec3 {
+        if depth == 0 {
+            return Vec3::default();
+        }
         let mut record = HitRecord::default();
-        if world.hit(*ray, 0.0..f64::INFINITY, &mut record) {
-            return 0.5 * (record.normal + Vec3::new_i32(1, 1, 1));
+        if world.hit(*ray, 0.001..f64::INFINITY, &mut record) {
+            let direction = record.normal + Vec3::random();
+            return 0.5 * self.ray_color(&Ray::new(record.point, direction), depth - 1, world);
         }
         let unit_direction = ray.direction.normal();
         let a = 0.5 * (unit_direction.y + 1.0);
