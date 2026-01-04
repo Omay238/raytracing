@@ -4,7 +4,7 @@ use raytracer::Sphere;
 use raytracer::Vec3;
 
 fn main() {
-    let mut world = HittableList::new();
+    let mut world = HittableList::default();
 
     world
         .objects
@@ -13,6 +13,6 @@ fn main() {
         .objects
         .push(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
 
-    let camera = Camera::new(16.0 / 9.0, 400);
+    let camera = Camera::new(16.0 / 9.0, 400, 100);
     camera.render(&world);
 }

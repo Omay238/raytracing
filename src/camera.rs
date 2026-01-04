@@ -5,11 +5,14 @@ use crate::Ray;
 use crate::Vec3;
 
 use libpbm::NetPBM;
+use rand::random;
 
 pub struct Camera {
     pub aspect_ratio: f64,
     pub image_width: usize,
+    pub samples_per_pixel: usize,
     image_height: usize,
+    pixel_samples_scale: f64,
     center: Vec3,
     pixel00_loc: Vec3,
     pixel_delta_u: Vec3,
@@ -17,10 +20,12 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f64, image_width: usize) -> Self {
+    pub fn new(aspect_ratio: f64, image_width: usize, samples_per_pixel: usize) -> Self {
         // Calculate the image height, and ensure that it's at least 1.
         let image_height = (image_width as f64 / aspect_ratio) as usize;
         let image_height = if image_height < 1 { 1 } else { image_height };
+
+        let pixel_samples_scale = 1.0 / samples_per_pixel as f64;
 
         // Determine viewport dimensions.
         let focal_length = 1.0;
@@ -44,7 +49,9 @@ impl Camera {
         Self {
             aspect_ratio,
             image_width,
+            samples_per_pixel,
             image_height,
+            pixel_samples_scale,
             center,
             pixel00_loc,
             pixel_delta_u,
@@ -58,27 +65,39 @@ impl Camera {
         for j in 0..self.image_height {
             println!("Scanlines remaining: {}", self.image_height - j);
             for i in 0..self.image_width {
-                let pixel_center = self.pixel00_loc
-                    + (i as f64 * self.pixel_delta_u)
-                    + (j as f64 * self.pixel_delta_v);
-                let ray_direction = pixel_center - self.center;
-                let ray = Ray::new(self.center, ray_direction);
+                let mut color = Vec3::default();
 
-                let color = self.ray_color(&ray, &world);
-                img.set_pixel(i, j, color);
+                for _ in 0..self.samples_per_pixel {
+                    color += self.ray_color(&self.get_ray(i, j), world);
+                }
+
+                img.set_pixel(i, j, (color * self.pixel_samples_scale).color(255));
             }
         }
 
         img.save_raw("render.ppm").expect("Failed to save image!");
     }
 
-    fn ray_color(&self, ray: &Ray, world: &HittableList) -> [u16; 3] {
+    fn get_ray(&self, i: usize, j: usize) -> Ray {
+        // Construct a camera ray originating from the origin and directed at randomly sampled
+        // point around the pixel location i, j.
+
+        let offset = Vec3::new(random::<f64>() - 0.5, random::<f64>() - 0.5, 0.0);
+        let pixel_sample = self.pixel00_loc + ((i as f64 + offset.x) * self.pixel_delta_u) + ((j as f64 + offset.y) * self.pixel_delta_v);
+
+        let ray_origin = self.center;
+        let ray_direction = pixel_sample - ray_origin;
+
+        Ray::new(ray_origin, ray_direction)
+    }
+
+    fn ray_color(&self, ray: &Ray, world: &HittableList) -> Vec3 {
         let mut record = HitRecord::default();
         if world.hit(*ray, 0.0..f64::INFINITY, &mut record) {
-            return (0.5 * (record.normal + Vec3::new_i32(1, 1, 1))).color(255);
+            return 0.5 * (record.normal + Vec3::new_i32(1, 1, 1));
         }
         let unit_direction = ray.direction.normal();
         let a = 0.5 * (unit_direction.y + 1.0);
-        ((1.0 - a) * Vec3::new_i32(1, 1, 1) + a * Vec3::new(0.5, 0.7, 1.0)).color(255)
+        (1.0 - a) * Vec3::new_i32(1, 1, 1) + a * Vec3::new(0.5, 0.7, 1.0)
     }
 }
